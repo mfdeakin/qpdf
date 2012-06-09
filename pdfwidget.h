@@ -15,8 +15,11 @@ public:
     int pageNumber();
     int pageWidth();
     int pageHeight();
+
+    void setClearColor(const QColor &c);
 signals:
-    
+    void pdfLoaded();
+
 public slots:
     void loadPDF(QString pdfName);
     void scalePDF(double scale);

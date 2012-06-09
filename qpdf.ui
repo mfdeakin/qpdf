@@ -64,7 +64,7 @@
          </size>
         </property>
         <property name="text">
-         <string>0</string>
+         <string>1</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -74,7 +74,7 @@
       <item>
        <widget class="QLabel" name="labelPages">
         <property name="text">
-         <string>/0</string>
+         <string>/ 0</string>
         </property>
        </widget>
       </item>
@@ -254,6 +254,9 @@
    <extends>QWidget</extends>
    <header>pdfwidget.h</header>
    <container>1</container>
+   <slots>
+    <signal>pdfLoaded()</signal>
+   </slots>
   </customwidget>
  </customwidgets>
  <resources/>
@@ -297,8 +300,8 @@
    <slot>nextPage()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>149</x>
-     <y>40</y>
+     <x>186</x>
+     <y>56</y>
     </hint>
     <hint type="destinationlabel">
      <x>452</x>
@@ -313,8 +316,8 @@
    <slot>prevPage()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>39</x>
-     <y>39</y>
+     <x>76</x>
+     <y>56</y>
     </hint>
     <hint type="destinationlabel">
      <x>270</x>
@@ -354,6 +357,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pdfView</sender>
+   <signal>pdfLoaded()</signal>
+   <receiver>QPdf</receiver>
+   <slot>pdfLoaded()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>753</x>
+     <y>99</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>750</x>
+     <y>26</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>showFiles()</slot>
@@ -361,5 +380,6 @@
   <slot>prevPage()</slot>
   <slot>changePage()</slot>
   <slot>setScale()</slot>
+  <slot>pdfLoaded()</slot>
  </slots>
 </ui>

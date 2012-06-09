@@ -24,6 +24,7 @@ public slots:
     void prevPage();
     bool changePage();
     void setScale();
+    void pdfLoaded();
 private:
     void keyPressEvent(QKeyEvent *e);
     double scale;

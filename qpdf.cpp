@@ -16,6 +16,7 @@ QPdf::QPdf(QWidget *parent) :
     fd->setFilter("*.pdf");
     fd->setFileMode(QFileDialog::ExistingFile);
     connect(fd, SIGNAL(fileSelected(QString)), ui->pdfView, SLOT(loadPDF(QString)));
+    ui->pdfView->setClearColor(palette().color(QPalette::Window));
 }
 
 QPdf::~QPdf()
@@ -53,7 +54,6 @@ bool QPdf::changePage()
 
 void QPdf::nextPage()
 {
-    qDebug() << ui->pdfView->pageCount();
     int pageNum = ui->pdfView->pageNumber();
     if(pageNum >= ui->pdfView->pageCount())
         return;
@@ -90,6 +90,11 @@ void QPdf::setScale()
     }
     else
         ui->lineScale->setText(QString().sprintf("%3.0f", scale * 100));
+}
+
+void QPdf::pdfLoaded()
+{
+    ui->labelPages->setText(QString().sprintf("/ %d", ui->pdfView->pageCount()));
 }
 
 void QPdf::showFiles()

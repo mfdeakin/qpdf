@@ -47,20 +47,16 @@ void pdfWidget::paintGL()
 
 void pdfWidget::initializeGL()
 {
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_COLOR_MATERIAL);
-    glEnable(GL_BLEND);
-    glEnable(GL_POLYGON_SMOOTH);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_TEXTURE_2D);
     glClearColor(0, 0, 0, 0);
     // when texture area is small, bilinear filter the closest mipmap
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     // when texture area is large, bilinear filter the original
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // the texture wraps over at the edges (repeat)
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 }
 
 void pdfWidget::loadPDF(QString pdfName)
@@ -89,9 +85,12 @@ void pdfWidget::loadPDF(QString pdfName)
     validPages = new bool[textureCount];
     pageW = new int[textureCount];
     pageH = new int[textureCount];
+    for(int i = 0; i < textureCount; i++)
+        textures[i] = 0;
     glGenTextures(textureCount, textures);
     for(int i = 0; i < pdf->numPages(); i++)
     {
+        qDebug() << textures[i];
         Poppler::Page *p = pdf->page(i);
         if(!p)
         {
@@ -101,14 +100,16 @@ void pdfWidget::loadPDF(QString pdfName)
         validPages[i] = true;
         pageW[i] = p->pageSize().width();
         pageH[i] = p->pageSize().height();
-        QImage img = p->renderToImage(288, 288);
-        gluBuild2DMipmaps( GL_TEXTURE_2D, 3, img.width(), img.height(),
-                           GL_RGB, GL_UNSIGNED_BYTE,
-                           img.bits());
+        QImage img = QGLWidget::convertToGLFormat(p->renderToImage(220, 220));
+        glBindTexture(GL_TEXTURE_2D, textures[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_TEXTURE_MAX_LOD);
     }
     page = 0;
     glBindTexture(GL_TEXTURE_2D, textures[0]);
     update();
+    emit pdfLoaded();
 }
 
 void pdfWidget::scalePDF(double scale)
@@ -165,4 +166,9 @@ int pdfWidget::pageNumber()
     if(pdf)
         return page;
     return -1;
+}
+
+void pdfWidget::setClearColor(const QColor &c)
+{
+    glClearColor(c.red(), c.green(), c.blue(), c.alpha());
 }
