@@ -1,36 +1,47 @@
 #include "pdfwidget.h"
 #include <GL/glu.h>
 #include <QImage>
+#include <QDebug>
+
+#define SAFEFREE(x, y) if(x) { delete y x; x = NULL; }
 
 pdfWidget::pdfWidget(QWidget *parent) :
-    QGLWidget(parent), page(0), pdf(NULL),
-    textures(NULL), validPages(NULL)
-{
-    this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-}
+    QGLWidget(parent), pdf(NULL), page(0),
+    textures(NULL), textureCount(0), scale(1),
+    validPages(NULL), pageW(NULL), pageH(NULL)
+{}
 
 pdfWidget::~pdfWidget()
 {
     if(pdf)
+    {
         delete pdf;
+        pdf = NULL;
+    }
     if(textures)
     {
         glDeleteTextures(textureCount, textures);
         delete[] textures;
     }
-    if(validPages)
-        delete[] validPages;
+    SAFEFREE(validPages, []);
+    SAFEFREE(pageW, []);
+    SAFEFREE(pageH, []);
 }
 
 void pdfWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT);
-    glBegin(GL_QUADS);
-    glTexCoord2d(0.0, 0.0); glVertex3f(0.0f, 0.0f, 0.0f);
-    glTexCoord2d(1.0, 0.0); glVertex3f(1.0f, 0.0f, 0.0f);
-    glTexCoord2d(1.0, 1.0); glVertex3f(1.0f, 1.0f, 0.0f);
-    glTexCoord2d(0.0, 1.0); glVertex3f(0.0f, 1.0f, 0.0f);
-    glEnd();
+    if(validPages && validPages[page])
+    {
+        float x = pageWidth(), y = pageHeight();
+        x /= 2; y /= 2;
+        glBegin(GL_QUADS);
+        glTexCoord2d(0.0, 0.0); glVertex3f(-x, -y, 0.0f);
+        glTexCoord2d(1.0, 0.0); glVertex3f(x, -y, 0.0f);
+        glTexCoord2d(1.0, 1.0); glVertex3f(x, y, 0.0f);
+        glTexCoord2d(0.0, 1.0); glVertex3f(-x, y, 0.0f);
+        glEnd();
+    }
     glFlush();
 }
 
@@ -54,30 +65,30 @@ void pdfWidget::initializeGL()
 
 void pdfWidget::loadPDF(QString pdfName)
 {
-    if(pdf)
-    {
-        delete pdf;
-        pdf = NULL;
-    }
+    SAFEFREE(pdf,);
     if(textures)
     {
         glDeleteTextures(textureCount, textures);
         delete[] textures;
         textures = NULL;
     }
-    if(validPages)
-        delete[] validPages;
+    SAFEFREE(validPages, []);
+    SAFEFREE(pageW, []);
+    SAFEFREE(pageH, []);
     pdf = Poppler::Document::load(pdfName);
     if(!pdf)
         return;
     if(pdf->isLocked())
     {
         delete pdf;
+        pdf = NULL;
         return;
     }
     textureCount = pdf->numPages();
     textures = new GLuint[textureCount];
     validPages = new bool[textureCount];
+    pageW = new int[textureCount];
+    pageH = new int[textureCount];
     glGenTextures(textureCount, textures);
     for(int i = 0; i < pdf->numPages(); i++)
     {
@@ -88,32 +99,45 @@ void pdfWidget::loadPDF(QString pdfName)
             continue;
         }
         validPages[i] = true;
+        pageW[i] = p->pageSize().width();
+        pageH[i] = p->pageSize().height();
         QImage img = p->renderToImage(288, 288);
-        gluBuild2DMipmaps( GL_TEXTURE_2D, 3, img.width(), img.height(), GL_RGB, GL_UNSIGNED_BYTE, img.bits());
+        gluBuild2DMipmaps( GL_TEXTURE_2D, 3, img.width(), img.height(),
+                           GL_RGB, GL_UNSIGNED_BYTE,
+                           img.bits());
     }
+    page = 0;
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    update();
 }
 
 void pdfWidget::scalePDF(double scale)
 {
-
+    this->scale = scale;
 }
 
 void pdfWidget::changePage(int page)
 {
     if(page >= 0 && page < pdf->numPages())
     {
+        this->page = page;
         glBindTexture(GL_TEXTURE_2D, textures[page]);
         update();
     }
 }
 
-int pdfWidget::docHeight()
+int pdfWidget::pageHeight()
 {
+    if(validPages && validPages[page])
+        return pageH[page];
+    return -1;
 }
 
-int pdfWidget::docWidth()
+int pdfWidget::pageWidth()
 {
-
+    if(validPages && validPages[page])
+        return pageW[page];
+    return -1;
 }
 
 void pdfWidget::resizeGL(int w, int h)
@@ -127,4 +151,18 @@ void pdfWidget::resizeGL(int w, int h)
     gluOrtho2D(negw, width, negh, height);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+}
+
+int pdfWidget::pageCount()
+{
+    if(pdf)
+        return pdf->numPages();
+    return -1;
+}
+
+int pdfWidget::pageNumber()
+{
+    if(pdf)
+        return page;
+    return -1;
 }

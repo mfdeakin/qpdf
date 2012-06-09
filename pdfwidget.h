@@ -12,8 +12,9 @@ public:
     ~pdfWidget();
 
     int pageCount();
-    int docWidth();
-    int docHeight();
+    int pageNumber();
+    int pageWidth();
+    int pageHeight();
 signals:
     
 public slots:
@@ -29,9 +30,12 @@ protected:
 private:
     Poppler::Document *pdf;
     int page;
-    bool *validPages;
     GLuint *textures;
     GLsizei textureCount;
+    double scale;
+    bool *validPages;
+    int *pageW;
+    int *pageH;
 };
 
 #endif // PDFWIDGET_H

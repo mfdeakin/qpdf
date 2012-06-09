@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QGraphicsScene>
 #include <poppler/qt4/poppler-qt4.h>
+#include "pdfwidget.h"
 
 namespace Ui {
 class QPdf;
@@ -19,7 +20,6 @@ public:
     ~QPdf();
 public slots:
     void showFiles();
-    void openFile(QString file);
     void nextPage();
     void prevPage();
     bool changePage();
@@ -29,10 +29,8 @@ private:
     double scale;
 
     Ui::QPdf *ui;
-    QGraphicsScene *scene;
-    Poppler::Document *pdf;
+    pdfWidget *pdfView;
     QFileDialog *fd;
-    int pageNum;
 };
 
 #endif // QPDF_H

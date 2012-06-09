@@ -9,60 +9,22 @@
 QPdf::QPdf(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::QPdf),
-    pdf(NULL),
-    scene(new QGraphicsScene(this)),
-    fd(new QFileDialog(this)),
-    scale(1.0)
+    fd(new QFileDialog(this))
 {
     ui->setupUi(this);
     fd->setAcceptMode(QFileDialog::AcceptOpen);
     fd->setFilter("*.pdf");
     fd->setFileMode(QFileDialog::ExistingFile);
-    connect(fd, SIGNAL(fileSelected(QString)), this, SLOT(openFile(QString)));
-    ui->graphicsView->setScene(scene);
-    ui->graphicsView->setBackgroundBrush(palette().brush(QPalette::Window));
-    ui->graphicsView->scale(0.5, 0.5);
-    pdfWidget *p = new pdfWidget(this);
-    layout()->addWidget(p);
+    connect(fd, SIGNAL(fileSelected(QString)), ui->pdfView, SLOT(loadPDF(QString)));
 }
 
 QPdf::~QPdf()
 {
-    if(pdf)
-        delete pdf;
     delete ui;
-}
-
-void QPdf::showFiles()
-{
-    fd->show();
-}
-
-void QPdf::openFile(QString file)
-{
-    if(pdf)
-        delete pdf;
-    pdf = Poppler::Document::load(file);
-    if(!pdf)
-        return;
-    if(pdf->isLocked())
-    {
-        QMessageBox *msg = new QMessageBox(this);
-        msg->setWindowTitle("QPdf");
-        msg->setText(file + " is locked");
-        msg->show();
-        delete pdf;
-    }
-    setWindowTitle(QString("QPdf: ") + file);
-    pageNum = 0;
-    ui->linePage->setText(QString().sprintf("%d", pageNum + 1));
-    ui->labelPages->setText(QString().sprintf("/ %d", pdf->numPages()));
-    changePage();
 }
 
 void QPdf::keyPressEvent(QKeyEvent *e)
 {
-    qDebug() << e->key();
     this->setFocus();
     switch(e->key())
     {
@@ -82,25 +44,18 @@ void QPdf::keyPressEvent(QKeyEvent *e)
 bool QPdf::changePage()
 {
     bool chk;
-    int tmp = ui->linePage->text().toInt(&chk) - 1;
-    if(!chk)
+    int page = ui->linePage->text().toInt(&chk) - 1;
+    if(!chk || page >= ui->pdfView->pageCount() || page < 0)
         return false;
-    if(!pdf || tmp >= pdf->numPages() || tmp < 0)
-        return false;
-    Poppler::Page *page = pdf->page(tmp);
-    if(!page)
-        return false;
-    pageNum = tmp;
-    QImage img = page->renderToImage(144, 144);
-    scene->clear();
-    scene->addPixmap(QPixmap::fromImage(img));
-    scene->addRect(0, 0, img.width(), img.height());
+    ui->pdfView->changePage(page);
     return true;
 }
 
 void QPdf::nextPage()
 {
-    if(!pdf || pageNum > pdf->numPages())
+    qDebug() << ui->pdfView->pageCount();
+    int pageNum = ui->pdfView->pageNumber();
+    if(pageNum >= ui->pdfView->pageCount())
         return;
     pageNum++;
     ui->linePage->setText(QString().sprintf("%d", pageNum + 1));
@@ -113,14 +68,15 @@ void QPdf::nextPage()
 
 void QPdf::prevPage()
 {
-    if(!pdf || pageNum == 0)
+    int pageNum = ui->pdfView->pageNumber() + 1;
+    if(pageNum == 0)
         return;
     pageNum--;
-    ui->linePage->setText(QString().sprintf("%d", pageNum + 1));
+    ui->linePage->setText(QString().sprintf("%d", pageNum));
     if(!changePage())
     {
         pageNum++;
-        ui->linePage->setText(QString().sprintf("%d", pageNum + 1));
+        ui->linePage->setText(QString().sprintf("%d", pageNum));
     }
 }
 
@@ -130,10 +86,13 @@ void QPdf::setScale()
     double tmp = ui->lineScale->text().toDouble(&chk);
     if(chk && tmp > 0)
     {
-        ui->graphicsView->scale(1 / scale, 1 / scale);
-        scale = tmp / 100;
-        ui->graphicsView->scale(scale, scale);
+        ui->pdfView->scalePDF(tmp);
     }
     else
         ui->lineScale->setText(QString().sprintf("%3.0f", scale * 100));
+}
+
+void QPdf::showFiles()
+{
+    fd->show();
 }
