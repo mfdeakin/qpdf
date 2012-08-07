@@ -4,11 +4,12 @@
 #include <X11/X.h>
 #include <GL/glx.h>
 #include <GL/glu.h>
+#include <cmath>
 
 #define SAFEFREE(x, y) if(x) { delete y x; x = NULL; }
 
 pdfWidget::pdfWidget(QWidget *parent) :
-    QGLWidget(parent), pdf(NULL), page(0), scale(1),
+    QGLWidget(parent), pdf(NULL), page(0), scale(0),
     pages(NULL), worker(), loader(new pdfLoader())
 {
     connect(this, SIGNAL(readyLoad(Poppler::Document*)),
@@ -40,12 +41,45 @@ pdfWidget::~pdfWidget()
 
 void pdfWidget::paintGL()
 {
+    QColor back = palette().background().color();
+    glClearColor(back.redF(), back.greenF(),
+                 back.blueF(), back.alphaF());
     glClear(GL_COLOR_BUFFER_BIT);
-    if(pages && pages[page].valid)
+    if(pages && page < pdf->numPages() &&
+            page >= 0 && pages[page].valid)
     {
-        qDebug() << "Rendering page" << page;
-        float x = pageWidth(), y = pageHeight();
+        qDebug() << "Rendering page" << page << pages[page].texture;
+        glLoadIdentity();
+        double x = pageWidth(), y = pageHeight();
+        if(scale > 0)
+            glScalef(scale / 100, scale / 100, 0);
+        else
+        {
+            /* Right triangle math:
+             * Calculate our "real" x and y values
+             * with rotation mathematics
+             * x' = mag * sin(t + t')
+             *    = mag * (sin(t) * cos(t') + cos(t) * sin(t'))
+             *    = x * cos(t') + y * sin(t');
+             * y' = mag * cos(t + t')
+             *    = mag * (cos(t) * cos(t') - sin(t) * sin(t'))
+             *    = y * cos(t') - x * sin(t');
+             * We always add, because the rotation affects
+             * different corners in different ways.
+             * We need the greatest x and y values of the corners */
+            double radians = rotation * M_PI / 180,
+                   realx = fabs(x * sin(radians))
+                    + fabs(y * cos(radians)),
+                   realy = fabs(y * cos(radians))
+                    + fabs(x * sin(radians));
+            if(width() / realx < height() / realy)
+                glScalef(width() / realx, width() / realx, 0);
+            else
+                glScalef(height() / realy, height() / realy, 0);
+        }
         x /= 2; y /= 2;
+        glRotated(rotation, 0.0, 0.0, 1.0);
+        glBindTexture(GL_TEXTURE_2D, pages[page].texture);
         glBegin(GL_QUADS);
         glTexCoord2d(0.0, 0.0); glVertex3f(-x, -y, 0.0f);
         glTexCoord2d(1.0, 0.0); glVertex3f(x, -y, 0.0f);
@@ -93,14 +127,15 @@ void pdfWidget::loadPDF(QString pdfName)
         glGenTextures(1, &pages[i].texture);
     page = -1;
     readyLoad(pdf);
+    pdfLoaded(pdfName);
 }
 
-void pdfWidget::pageLoaded(int page, QImage img, unsigned w, unsigned h)
+void pdfWidget::pageLoaded(int p, QImage img, unsigned w, unsigned h)
 {
     if(pages)
     {
-        qDebug() << "Page loaded" << page;
-        glBindTexture(GL_TEXTURE_2D, pages[page].texture);
+        qDebug() << "Page loaded" << p;
+        glBindTexture(GL_TEXTURE_2D, pages[p].texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                      img.width(), img.height(), 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
@@ -109,17 +144,24 @@ void pdfWidget::pageLoaded(int page, QImage img, unsigned w, unsigned h)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
                         GL_TEXTURE_MAX_LOD);
 
-        pages[page].valid = true;
-        pages[page].width = w;
-        pages[page].height = h;
-        if(page == -1)
-            changePage(page);
+        pages[p].valid = true;
+        pages[p].width = w;
+        pages[p].height = h;
+        if(this->page == -1)
+            changePage(p);
     }
 }
 
 void pdfWidget::scalePDF(double scale)
 {
     this->scale = scale;
+    this->repaint();
+}
+
+void pdfWidget::rotatePDF(double angle)
+{
+    this->rotation = angle;
+    this->repaint();
 }
 
 void pdfWidget::changePage(int page)
@@ -128,7 +170,7 @@ void pdfWidget::changePage(int page)
     {
         this->page = page;
         glBindTexture(GL_TEXTURE_2D, pages[page].texture);
-        update();
+        repaint();
     }
 }
 
@@ -175,7 +217,9 @@ int pdfWidget::pageNumber()
 
 void pdfWidget::setClearColor(const QColor &c)
 {
-    glClearColor(c.red(), c.green(), c.blue(), c.alpha());
+    QPalette pal = palette();
+    pal.setColor(QPalette::Background, c);
+    setPalette(pal);
 }
 
 pdfLoader::pdfLoader(QObject *parent) :
@@ -189,8 +233,9 @@ void pdfLoader::loadPDF(Poppler::Document *pdf)
         Poppler::Page *p = pdf->page(i);
         if(!p)
             continue;
-        QImage img = QGLWidget::convertToGLFormat(p->renderToImage(220, 220));
-        emit pageLoaded(i, img, p->pageSize().width(),
+        QImage prePage = p->renderToImage(144, 144);
+        QImage finalPage = QGLWidget::convertToGLFormat(prePage);
+        emit pageLoaded(i, finalPage, p->pageSize().width(),
                         p->pageSize().height());
     }
 }

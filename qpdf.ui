@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>QPdf</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -126,7 +126,7 @@
          </size>
         </property>
         <property name="text">
-         <string>100</string>
+         <string>Fit</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -150,37 +150,33 @@
       <item>
        <widget class="QLabel" name="label_4">
         <property name="text">
-         <string>Find:</string>
+         <string>Rotation:</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit"/>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox">
-        <property name="text">
-         <string>Match Case</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox_2">
-        <property name="text">
-         <string>Search Up</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButton_3">
+       <widget class="QLineEdit" name="lineRotate">
         <property name="maximumSize">
          <size>
-          <width>40</width>
+          <width>60</width>
           <height>16777215</height>
          </size>
         </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
         <property name="text">
-         <string>Find</string>
+         <string>0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>degrees</string>
         </property>
        </widget>
       </item>
@@ -255,7 +251,7 @@
    <header>pdfwidget.h</header>
    <container>1</container>
    <slots>
-    <signal>pdfLoaded()</signal>
+    <signal>pdfLoaded(QString)</signal>
    </slots>
   </customwidget>
  </customwidgets>
@@ -332,8 +328,8 @@
    <slot>changePage()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>83</x>
-     <y>44</y>
+     <x>136</x>
+     <y>55</y>
     </hint>
     <hint type="destinationlabel">
      <x>104</x>
@@ -348,8 +344,8 @@
    <slot>setScale()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>253</x>
-     <y>46</y>
+     <x>313</x>
+     <y>55</y>
     </hint>
     <hint type="destinationlabel">
      <x>308</x>
@@ -359,9 +355,9 @@
   </connection>
   <connection>
    <sender>pdfView</sender>
-   <signal>pdfLoaded()</signal>
+   <signal>pdfLoaded(QString)</signal>
    <receiver>QPdf</receiver>
-   <slot>pdfLoaded()</slot>
+   <slot>pdfLoaded(QString)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>753</x>
@@ -373,6 +369,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>lineRotate</sender>
+   <signal>editingFinished()</signal>
+   <receiver>QPdf</receiver>
+   <slot>setRotation()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>424</x>
+     <y>41</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>558</x>
+     <y>29</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>showFiles()</slot>
@@ -380,6 +392,7 @@
   <slot>prevPage()</slot>
   <slot>changePage()</slot>
   <slot>setScale()</slot>
-  <slot>pdfLoaded()</slot>
+  <slot>pdfLoaded(QString)</slot>
+  <slot>setRotation()</slot>
  </slots>
 </ui>

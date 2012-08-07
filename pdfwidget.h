@@ -21,12 +21,13 @@ public:
 
     void setClearColor(const QColor &c);
 signals:
-    void pdfLoaded();
+    void pdfLoaded(QString name);
     void readyLoad(Poppler::Document *pdf);
 
 public slots:
     void loadPDF(QString pdfName);
     void scalePDF(double scale);
+    void rotatePDF(double angle);
     void changePage(int page);
 
 protected:
@@ -41,6 +42,7 @@ private:
     Poppler::Document *pdf;
     int page;
     double scale;
+    double rotation;
     struct PageData {
         bool valid;
         unsigned width;
