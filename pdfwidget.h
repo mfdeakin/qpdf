@@ -4,6 +4,11 @@
 #include <QtOpenGL/QGLWidget>
 #include <poppler/qt4/poppler-qt4.h>
 #include <QThread>
+#include <QList>
+
+#ifndef DEFMAXTEXTURES
+#define DEFMAXTEXTURES 50
+#endif
 
 class pdfLoader;
 
@@ -20,6 +25,7 @@ public:
     int pageHeight();
 
     void setClearColor(const QColor &c);
+    void setMaxTextures(unsigned);
 signals:
     void pdfLoaded();
     void readyLoad(Poppler::Document *pdf);
@@ -38,18 +44,24 @@ private slots:
     void pageLoaded(int page, QImage img, unsigned w, unsigned h);
 
 private:
+    void createTex(unsigned pnum);
+
     Poppler::Document *pdf;
     int page;
     double scale;
     struct PageData {
         bool valid;
+        bool activeTex;
         unsigned width;
         unsigned height;
         GLuint texture;
+        QImage img;
     } *pages;
 
     QThread worker;
     pdfLoader *loader;
+    QList<unsigned> activeTexs;
+    unsigned maxTextures, curTextures;
 };
 
 class pdfLoader : public QObject
