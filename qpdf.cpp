@@ -3,8 +3,12 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QKeyEvent>
+#include <QWheelEvent>
 
 #include "pdfwidget.h"
+
+const QColor textWhiteColor(Qt::white);
+const QColor textErrorColor(240, 180, 170);
 
 QPdf::QPdf(QWidget *parent) :
     QMainWindow(parent),
@@ -16,7 +20,6 @@ QPdf::QPdf(QWidget *parent) :
     fd->setFilter("*.pdf");
     fd->setFileMode(QFileDialog::ExistingFile);
     connect(fd, SIGNAL(fileSelected(QString)), ui->pdfView, SLOT(loadPDF(QString)));
-    ui->pdfView->setClearColor(palette().color(QPalette::Window));
 }
 
 QPdf::~QPdf()
@@ -40,6 +43,14 @@ void QPdf::keyPressEvent(QKeyEvent *e)
     case Qt::Key_Down:
         break;
     }
+}
+
+void QPdf::wheelEvent(QWheelEvent *e)
+{
+    if(e->delta() < 0)
+        nextPage();
+    else
+        prevPage();
 }
 
 bool QPdf::changePage()
@@ -83,18 +94,56 @@ void QPdf::prevPage()
 void QPdf::setScale()
 {
     bool chk;
-    double tmp = ui->lineScale->text().toDouble(&chk);
-    if(chk && tmp > 0)
+    double scale = ui->lineScale->text().toDouble(&chk);
+    QPalette clear = ui->lineScale->palette();
+    clear.setColor(QPalette::Base, textWhiteColor);
+    ui->lineScale->setPalette(clear);
+    if(chk && scale > 0)
     {
-        ui->pdfView->scalePDF(tmp);
+        ui->pdfView->scalePDF(scale);
     }
     else
-        ui->lineScale->setText(QString().sprintf("%3.0f", scale * 100));
+    {
+        if(ui->lineScale->text().toLower() == "fit" ||
+                ui->lineScale->text().isEmpty())
+            ui->pdfView->scalePDF(0.0);
+        else
+        {
+            QPalette err = ui->lineScale->palette();
+            err.setColor(QPalette::Base, textErrorColor);
+            ui->lineScale->setPalette(err);
+        }
+    }
 }
 
-void QPdf::pdfLoaded()
+void QPdf::setRotation()
+{
+    bool chk;
+    double angle = ui->lineRotate->text().toDouble(&chk);
+    QPalette clear = ui->lineRotate->palette();
+    clear.setColor(QPalette::Base, textWhiteColor);
+    ui->lineRotate->setPalette(clear);
+    if(chk)
+    {
+        ui->pdfView->rotatePDF(angle);
+    }
+    else
+    {
+        if(ui->lineRotate->text().isEmpty())
+            ui->pdfView->rotatePDF(0);
+        else
+        {
+            QPalette err = ui->lineRotate->palette();
+            err.setColor(QPalette::Base, textErrorColor);
+            ui->lineRotate->setPalette(err);
+        }
+    }
+}
+
+void QPdf::pdfLoaded(QString pdfName)
 {
     ui->labelPages->setText(QString().sprintf("/ %d", ui->pdfView->pageCount()));
+    setWindowTitle(QString("QPdf: ") + pdfName);
 }
 
 void QPdf::showFiles()

@@ -22,11 +22,14 @@ public slots:
     void showFiles();
     void nextPage();
     void prevPage();
-    bool changePage();
+private slots:
+    void pdfLoaded(QString pdfName);
     void setScale();
-    void pdfLoaded();
+    void setRotation();
+    bool changePage();
 private:
     void keyPressEvent(QKeyEvent *e);
+    void wheelEvent(QWheelEvent *e);
     double scale;
 
     Ui::QPdf *ui;
