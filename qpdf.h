@@ -27,6 +27,7 @@ private slots:
     void setScale();
     void setRotation();
     bool changePage();
+    void initialized();
 private:
     void keyPressEvent(QKeyEvent *e);
     void wheelEvent(QWheelEvent *e);

@@ -20,6 +20,7 @@ QPdf::QPdf(QWidget *parent) :
     fd->setFilter("*.pdf");
     fd->setFileMode(QFileDialog::ExistingFile);
     connect(fd, SIGNAL(fileSelected(QString)), ui->pdfView, SLOT(loadPDF(QString)));
+    connect(ui->pdfView, SIGNAL(readyGL()), this, SLOT(initialized()));
 }
 
 QPdf::~QPdf()
@@ -149,4 +150,10 @@ void QPdf::pdfLoaded(QString pdfName)
 void QPdf::showFiles()
 {
     fd->show();
+}
+
+void QPdf::initialized()
+{
+    if(qApp->arguments().size() > 1)
+        ui->pdfView->loadPDF(qApp->arguments()[1]);
 }

@@ -93,6 +93,13 @@ void pdfWidget::paintGL()
 void pdfWidget::initializeGL()
 {
     glEnable(GL_TEXTURE_2D);
+    //Enable antialiasing
+    glEnable(GL_POLYGON_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    glEnable(GL_BLEND);
     glClearColor(0, 0, 0, 0);
     // when texture area is small, bilinear filter the closest mipmap
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
@@ -102,6 +109,7 @@ void pdfWidget::initializeGL()
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    readyGL();
 }
 
 void pdfWidget::loadPDF(QString pdfName)

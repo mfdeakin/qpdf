@@ -21,6 +21,7 @@ public:
 
     void setClearColor(const QColor &c);
 signals:
+    void readyGL();
     void pdfLoaded(QString name);
     void readyLoad(Poppler::Document *pdf);
 
