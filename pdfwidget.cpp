@@ -9,8 +9,10 @@
 #define SAFEFREE(x, y) if(x) { delete y x; x = NULL; }
 
 pdfWidget::pdfWidget(QWidget *parent) :
-    QGLWidget(parent), pdf(NULL), page(0), scale(0),
-    pages(NULL), worker(), loader(new pdfLoader())
+    QGLWidget(parent), pdf(NULL), page(-1), scale(0),
+    pages(NULL), worker(), loader(new pdfLoader()),
+    activeTexs(), maxTextures(DEFMAXTEXTURES),
+    curTextures(0)
 {
     connect(this, SIGNAL(readyLoad(Poppler::Document*)),
             loader, SLOT(loadPDF(Poppler::Document*)));
@@ -48,6 +50,17 @@ void pdfWidget::paintGL()
     if(pages && page < pdf->numPages() &&
             page >= 0 && pages[page].valid)
     {
+        if(!pages[page].activeTex)
+        {
+            if(curTextures == maxTextures)
+            {
+                unsigned initial = activeTexs.first();
+                activeTexs.pop_front();
+                pages[initial].activeTex = false;
+                glDeleteTextures(1, &pages[initial].texture);
+            }
+            createTex(page);
+        }
         qDebug() << "Rendering page" << page << pages[page].texture;
         glLoadIdentity();
         double x = pageWidth(), y = pageHeight();
@@ -132,7 +145,10 @@ void pdfWidget::loadPDF(QString pdfName)
     }
     pages = new struct PageData[pdf->numPages()];
     for(int i = 0; i < pdf->numPages(); i++)
-        glGenTextures(1, &pages[i].texture);
+    {
+        pages[i].valid = false;
+        pages[i].activeTex = false;
+    }
     page = -1;
     readyLoad(pdf);
     pdfLoaded(pdfName);
@@ -143,21 +159,34 @@ void pdfWidget::pageLoaded(int p, QImage img, unsigned w, unsigned h)
     if(pages)
     {
         qDebug() << "Page loaded" << p;
-        glBindTexture(GL_TEXTURE_2D, pages[p].texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                     img.width(), img.height(), 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
-        glTexParameteri(GL_TEXTURE_2D,
-                        GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                        GL_TEXTURE_MAX_LOD);
 
+        pages[p].img = img;
         pages[p].valid = true;
         pages[p].width = w;
         pages[p].height = h;
-        if(this->page == -1)
+        pages[p].activeTex = false;
+        if(page == -1)
             changePage(p);
     }
+}
+
+void pdfWidget::createTex(unsigned pnum)
+{
+    qDebug() << "Creating texture" << pnum;
+    glGenTextures(1, &pages[page].texture);
+    glBindTexture(GL_TEXTURE_2D, pages[page].texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                 pages[pnum].img.width(),
+                 pages[pnum].img.height(), 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE,
+                 pages[pnum].img.bits());
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                    GL_TEXTURE_MAX_LOD);
+    activeTexs.append(pnum);
+    pages[pnum].activeTex = true;
+    curTextures++;
 }
 
 void pdfWidget::scalePDF(double scale)
@@ -202,8 +231,10 @@ void pdfWidget::resizeGL(int w, int h)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     /* Set up (0, 0) in the center of the widget */
-    double negw = -w, negh = -h, width = w, height = h;
-    negw /= 2; negh /= 2; width /= 2; height /= 2;
+    double negw = -w / 2,
+           negh = -h / 2,
+           width = w / 2,
+           height = h / 2;
     gluOrtho2D(negw, width, negh, height);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -221,6 +252,11 @@ int pdfWidget::pageNumber()
     if(pdf)
         return page;
     return -1;
+}
+
+void pdfWidget::setMaxTextures(unsigned count)
+{
+    maxTextures = count;
 }
 
 void pdfWidget::setClearColor(const QColor &c)
